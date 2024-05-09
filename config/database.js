@@ -8,6 +8,6 @@ const connectDB = async () => {
     console.error('Erreur de connexion à MongoDB:', error.message);
     process.exit(1); 
   }
-};
+}; 
 
 module.exports = connectDB;
