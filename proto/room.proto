@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package room;
+
+message Room {
+  string id = 1; 
+  string numero = 2; 
+  string type = 3; 
+  string status = 4; 
+  double prix = 5; 
+  string description = 6; 
+}
+
+message CreateRoomRequest {
+  string type = 1; 
+  double prix = 2; 
+  string description = 3; 
+  string numero = 4; 
+  string status = 5; 
+}
+
+
+message CreateRoomResponse {
+  Room room = 1; 
+}
+
+message GetRoomRequest {
+  string room_id = 1; 
+}
+
+message GetRoomResponse {
+  Room room = 1; 
+}
+
+message UpdateRoomRequest {
+  string room_id = 1; 
+  string type = 2; 
+  string status = 3; 
+  double prix = 4; 
+  string description = 5; 
+  string numero = 6; 
+}
+
+message UpdateRoomResponse {
+  Room room = 1; 
+}
+
+service RoomService {
+  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);  
+  rpc GetRoom(GetRoomRequest) returns (GetRoomResponse); 
+  rpc UpdateRoom(UpdateRoomRequest) returns (UpdateRoomResponse);
+}

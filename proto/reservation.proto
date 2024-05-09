@@ -1,0 +1,35 @@
+syntax = "proto3";
+package reservation;
+
+message Reservation {
+  string id = 1;
+  string client_id = 2;
+  string room_id = 3;
+  string dateStart = 4;
+  string dateEnd = 5;
+}
+
+message GetReservationRequest {
+  string reservation_id = 1;
+}
+
+message GetReservationResponse {
+  Reservation reservation = 1; 
+}
+
+message CreateReservationRequest {
+  string client_id = 1;
+  string room_id = 2;
+  string dateStart = 3;
+  string dateEnd = 4;
+}
+
+
+message CreateReservationResponse {
+  Reservation reservation = 1; 
+}
+
+service ReservationService {
+  rpc GetReservation(GetReservationRequest) returns (GetReservationResponse); 
+  rpc CreateReservation(CreateReservationRequest) returns (CreateReservationResponse); 
+}
