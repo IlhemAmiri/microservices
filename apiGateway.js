@@ -31,13 +31,76 @@ const clientProto = grpc.loadPackageDefinition(clientProtoDefinition).client;
 const reservationProto = grpc.loadPackageDefinition(reservationProtoDefinition).reservation;
 const ReservationService = new reservationProto.ReservationService('localhost:50056', grpc.credentials.createInsecure());
 const client = new clientProto.ClientService('localhost:50054', grpc.credentials.createInsecure());
-
+const roomProtoPath = './proto/room.proto';
+const roomProtoDefinition = protoLoader.loadSync(roomProtoPath, {
+  keepCase: true,
+  longs: String,
+  enums: String,
+  defaults: true,
+  oneofs: true,
+});
+const roomProto = grpc.loadPackageDefinition(roomProtoDefinition).room;
+const RoomService = new roomProto.RoomService('localhost:50055', grpc.credentials.createInsecure());
 
 app.use(cors());
 app.use(bodyParser.json());
-
+//routes grpc room
+app.post('/grpc/rooms', (req, res) => {
+    const { numero, type, status, prix, description } = req.body;
+    RoomService.createRoom({ numero, type, status, prix, description }, (err, response) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(response.room);
+    });
+  });
+  
+  app.get('/grpc/rooms/:id', (req, res) => {
+    const roomId = req.params.id;
+    RoomService.getRoom({ room_id: roomId }, (err, response) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(response.room);
+    });
+  });
+  
+  app.put('/grpc/rooms/:id', (req, res) => {
+    const roomId = req.params.id;
+    const { numero, type, status, prix, description } = req.body;
+    RoomService.updateRoom({ room_id: roomId, numero, type, status, prix, description }, (err, response) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(response.room);
+    });
+  });
+  
+  app.get('/grpc/rooms', (req, res) => {
+    RoomService.getAllRooms({}, (err, response) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(response.rooms);
+    });
+  });
+  
+  app.delete('/grpc/rooms/:id', (req, res) => {
+    const roomId = req.params.id;
+    RoomService.deleteRoom({ room_id: roomId }, (err, response) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json({ message: response.message });
+    });
+  });
 // Route pour récupérer une réservation
-app.get('/reservation/:id', (req, res) => {
+app.get('/grpc/reservation/:id', (req, res) => {
     const reservationId = req.params.id;
     ReservationService.getReservation({ reservation_id: reservationId }, (err, response) => {
       if (err) {
@@ -49,17 +112,13 @@ app.get('/reservation/:id', (req, res) => {
   });
   
   // Route pour créer une réservation
-  app.post('/reservation', async (req, res) => {
+  app.post('/grpc/reservation', async (req, res) => {
     try {
         const { client, room, dateStart, dateEnd } = req.body;
-
-        // Vérification si le client existe
         const clientData = await Client.findOne({ _id: client });
         if (!clientData) {
             return res.status(400).send("Client not found");
         }
-
-        // Vérification si la chambre existe
         const roomData = await Room.findById(room);
         if (!roomData) {
             return res.status(400).send("Room not found");
@@ -69,11 +128,8 @@ app.get('/reservation/:id', (req, res) => {
             return res.status(400).send("Room is not available");
         }
 
-        // Mise à jour du statut de la chambre
         roomData.status = 'réservée';
         await roomData.save();
-
-        // Création de la réservation
         const newReservation = new Reservation({ client, room, dateStart, dateEnd });
         const reservation = await newReservation.save();
         res.json(reservation);
@@ -85,7 +141,7 @@ app.get('/reservation/:id', (req, res) => {
 
   
   // Route pour mettre à jour une réservation
-  app.put('/reservation/:id', (req, res) => {
+  app.put('/grpc/reservation/:id', (req, res) => {
     const reservationId = req.params.id;
     const { client_id, room_id, dateStart, dateEnd } = req.body;
     ReservationService.updateReservation({ reservation_id: reservationId, client, room, dateStart, dateEnd }, (err, response) => {
@@ -98,7 +154,7 @@ app.get('/reservation/:id', (req, res) => {
   });
   
   // Route pour supprimer une réservation
-  app.delete('/reservation/:id', (req, res) => {
+  app.delete('/grpc/reservation/:id', (req, res) => {
     const reservationId = req.params.id;
     ReservationService.deleteReservation({ reservation_id: reservationId }, (err, response) => {
       if (err) {
@@ -110,7 +166,7 @@ app.get('/reservation/:id', (req, res) => {
   });
   
   // Route pour récupérer toutes les réservations
-  app.get('/reservation', (req, res) => {
+  app.get('/grpc/reservation', (req, res) => {
     ReservationService.getAllReservations({}, (err, response) => {
       if (err) {
         res.status(500).send("Error while fetching all reservations: " + err.message);
@@ -171,6 +227,10 @@ app.post('/grpc/client', (req, res) => {
       }
       res.json({ message: "client deleted successfully" });    });
   });
+
+
+
+  
   //route rest
 app.get('/client', async (req, res) => {
     try {

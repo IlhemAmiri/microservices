@@ -64,6 +64,29 @@ const roomService = {
       callback(new Error("Error while updating the room"));
     }
   },
+  getAllRooms: async (call, callback) => {
+    try {
+      const rooms = await Room.find();
+      callback(null, { rooms });
+    } catch (err) {
+      callback(new Error("Error while fetching all rooms"));
+    }
+  },
+
+  deleteRoom: async (call, callback) => {
+    try {
+      const roomId = call.request.room_id;
+      const deletedRoom = await Room.findByIdAndDelete(roomId);
+
+      if (!deletedRoom) {
+        return callback(new Error("Room not found"));
+      }
+
+      callback(null, { message: "Room deleted successfully" });
+    } catch (err) {
+      callback(new Error("Error while deleting the room"));
+    }
+  },
 };
 
 const server = new grpc.Server();
