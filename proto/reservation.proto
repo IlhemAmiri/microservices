@@ -3,8 +3,8 @@ package reservation;
 
 message Reservation {
   string id = 1;
-  string client_id = 2;
-  string room_id = 3;
+  string client = 2;
+  string room = 3;
   string dateStart = 4;
   string dateEnd = 5;
 }
@@ -14,22 +14,50 @@ message GetReservationRequest {
 }
 
 message GetReservationResponse {
-  Reservation reservation = 1; 
+  Reservation reservation = 1;
 }
 
 message CreateReservationRequest {
-  string client_id = 1;
-  string room_id = 2;
+  string client = 1;
+  string room = 2;
   string dateStart = 3;
   string dateEnd = 4;
 }
 
-
 message CreateReservationResponse {
-  Reservation reservation = 1; 
+  Reservation reservation = 1;
+}
+
+message UpdateReservationRequest {
+  string reservation_id = 1;
+  string client = 2;
+  string room = 3;
+  string dateStart = 4;
+  string dateEnd = 5;
+}
+
+message UpdateReservationResponse {
+  Reservation reservation = 1;
+}
+
+message DeleteReservationRequest {
+  string reservation_id = 1;
+}
+
+message DeleteReservationResponse {
+  string message = 1;
+}
+
+message GetAllReservationsRequest {}
+
+message GetAllReservationsResponse {
+  repeated Reservation reservations = 1;
 }
 
 service ReservationService {
   rpc GetReservation(GetReservationRequest) returns (GetReservationResponse); 
-  rpc CreateReservation(CreateReservationRequest) returns (CreateReservationResponse); 
+  rpc CreateReservation(CreateReservationRequest) returns (CreateReservationResponse);
+  rpc UpdateReservation(UpdateReservationRequest) returns (UpdateReservationResponse);
+  rpc DeleteReservation(DeleteReservationRequest) returns (DeleteReservationResponse);
+  rpc GetAllReservations(GetAllReservationsRequest) returns (GetAllReservationsResponse);
 }

@@ -1,6 +1,5 @@
-syntax = "proto3"; 
-package client; 
-
+syntax = "proto3";
+package client;
 
 message Client {
   string id = 1;
@@ -16,7 +15,7 @@ message GetClientRequest {
 }
 
 message GetClientResponse {
-  Client client = 1; 
+  Client client = 1;
 }
 
 message CreateClientRequest {
@@ -28,10 +27,41 @@ message CreateClientRequest {
 }
 
 message CreateClientResponse {
-  Client client = 1; 
+  Client client = 1;
+}
+
+message UpdateClientRequest {
+  string client_id = 1;
+  string nom = 2;
+  string prenom = 3;
+  string adresse = 4;
+  string email = 5;
+  string telephone = 6;
+}
+
+message UpdateClientResponse {
+  Client client = 1;
+}
+
+message DeleteClientRequest {
+  string client_id = 1;
+}
+
+message DeleteClientResponse {
+  string message = 1;
+}
+
+message GetAllClientsRequest {}
+
+message GetAllClientsResponse {
+  repeated Client clients = 1;
 }
 
 service ClientService {
-  rpc GetClient(GetClientRequest) returns (GetClientResponse); 
-  rpc CreateClient(CreateClientRequest) returns (CreateClientResponse); 
+  rpc GetClient(GetClientRequest) returns (GetClientResponse);
+  rpc CreateClient(CreateClientRequest) returns (CreateClientResponse);
+  rpc UpdateClient(UpdateClientRequest) returns (UpdateClientResponse);
+  rpc DeleteClient(DeleteClientRequest) returns (DeleteClientResponse);
+  rpc GetAllClients(GetAllClientsRequest) returns (GetAllClientsResponse);
 }
+
