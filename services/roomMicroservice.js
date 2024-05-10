@@ -3,10 +3,8 @@ const protoLoader = require('@grpc/proto-loader');
 const mongoose = require('mongoose');
 const Room = require('../models/roomModel'); 
 
-// Path to the Protobuf file
 const roomProtoPath = './proto/room.proto';
 
-// Load the Protobuf
 const roomProtoDefinition = protoLoader.loadSync(roomProtoPath, {
   keepCase: true,
   longs: String,
@@ -15,10 +13,8 @@ const roomProtoDefinition = protoLoader.loadSync(roomProtoPath, {
   oneofs: true,
 });
 
-// Load the Room service from the gRPC package
 const roomProto = grpc.loadPackageDefinition(roomProtoDefinition).room;
 
-// Connect to MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/mon_projet')
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => {
@@ -26,7 +22,6 @@ mongoose.connect('mongodb://127.0.0.1:27017/mon_projet')
     process.exit(1); // Exit the process on error
   });
 
-// gRPC service implementation for rooms
 const roomService = {
   createRoom: async (call, callback) => {
     try {
@@ -71,7 +66,6 @@ const roomService = {
   },
 };
 
-// Create the gRPC server
 const server = new grpc.Server();
 server.addService(roomProto.RoomService.service, roomService);
 

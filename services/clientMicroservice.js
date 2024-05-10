@@ -1,12 +1,11 @@
-const grpc = require('@grpc/grpc-js'); // For gRPC
-const protoLoader = require('@grpc/proto-loader'); // For loading Protobuf
-const mongoose = require('mongoose'); // For MongoDB
-const Client = require('../models/clientModel'); // Mongoose model for clients
+const grpc = require('@grpc/grpc-js'); 
+const protoLoader = require('@grpc/proto-loader'); 
+const mongoose = require('mongoose'); 
+const Client = require('../models/clientModel'); 
+//const { sendClientMessage } = require('./kafka/clientProducer');
 
-// Path to the Protobuf file
 const clientProtoPath = './proto/client.proto';
 
-// Load the Protobuf
 const clientProtoDefinition = protoLoader.loadSync(clientProtoPath, {
   keepCase: true,
   longs: String,
@@ -15,10 +14,8 @@ const clientProtoDefinition = protoLoader.loadSync(clientProtoPath, {
   oneofs: true,
 });
 
-// Load the Client service from the gRPC package
 const clientProto = grpc.loadPackageDefinition(clientProtoDefinition).client;
 
-// Connect to MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/mon_projet')
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => {
@@ -26,7 +23,6 @@ mongoose.connect('mongodb://127.0.0.1:27017/mon_projet')
     process.exit(1); // Exit the process on error
   });
 
-// gRPC service implementation for clients
 const clientService = {
   getClient: async (call, callback) => {
     try {
@@ -48,7 +44,7 @@ const clientService = {
       const { nom, prenom, adresse, email, telephone } = call.request;
       const newClient = new Client({ nom, prenom, adresse, email, telephone });
       const client = await newClient.save();
-
+      //await sendClientMessage('creation', client);
       callback(null, { client });
     } catch (err) {
       callback(new Error("Error while creating the client"));
@@ -56,7 +52,6 @@ const clientService = {
   },
 };
 
-// Create the gRPC server
 const server = new grpc.Server();
 server.addService(clientProto.ClientService.service, clientService);
 

@@ -1,22 +1,21 @@
-const Room = require('../models/roomModel'); // Require the room model
+const Room = require('../models/roomModel'); 
 
-// Create a new room
+
 const createRoom = async (numero, type, status, prix, description) => {
   const newRoom = new Room({ numero, type, status, prix, description});
-  return await newRoom.save(); // Save to the database
+  return await newRoom.save(); 
 };
 
-// Get all rooms
+
 const getRooms = async () => {
-  return await Room.find(); // Get all rooms
+  return await Room.find(); 
 };
 
-// Get a room by ID
+
 const getRoomById = async (id) => {
-  return await Room.findById(id); // Find a room by its ID
+  return await Room.findById(id); 
 };
 
-// Export the services
 module.exports = {
   createRoom,
   getRooms,

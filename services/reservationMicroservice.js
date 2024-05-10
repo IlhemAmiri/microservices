@@ -1,12 +1,10 @@
-const grpc = require('@grpc/grpc-js'); // For gRPC
-const protoLoader = require('@grpc/proto-loader'); // For loading Protobuf
-const mongoose = require('mongoose'); // For MongoDB
-const Reservation = require('../models/reservationModel'); // Mongoose model for reservations
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader'); 
+const mongoose = require('mongoose'); 
+const Reservation = require('../models/reservationModel');
 
-// Path to the Protobuf file for reservations
 const reservationProtoPath = './proto/reservation.proto';
 
-// Load the Protobuf for reservations
 const reservationProtoDefinition = protoLoader.loadSync(reservationProtoPath, {
   keepCase: true,
   longs: String,
@@ -15,18 +13,15 @@ const reservationProtoDefinition = protoLoader.loadSync(reservationProtoPath, {
   oneofs: true,
 });
 
-// Load the Reservation service from the gRPC package
 const reservationProto = grpc.loadPackageDefinition(reservationProtoDefinition).reservation;
 
-// Connect to MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/mon_projet')
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => {
     console.error('Failed to connect to MongoDB:', err);
-    process.exit(1); // Exit the process on error
+    process.exit(1); 
   });
 
-// gRPC service implementation for reservations
 const reservationService = {
   getReservation: async (call, callback) => {
     try {
@@ -56,7 +51,6 @@ const reservationService = {
   },
 };
 
-// Create the gRPC server for reservations
 const server = new grpc.Server();
 server.addService(reservationProto.ReservationService.service, reservationService);
 

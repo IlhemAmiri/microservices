@@ -5,16 +5,14 @@ const connectDB = require('./config/database');
 const Client = require('./models/clientModel');
 const Room = require('./models/roomModel');
 const Reservation = require('./models/reservationModel');
-const produceMessage = require('./kafka/produceMessage');
+//const { sendClientMessage } = require('./kafka/clientProducer');
 const app = express();
 
-// Connect to MongoDB
 connectDB();
 
 app.use(cors());
 app.use(bodyParser.json());
 
-// Define routes for clients
 app.get('/client', async (req, res) => {
     try {
         const clients = await Client.find();
@@ -41,7 +39,7 @@ app.post('/client', async (req, res) => {
         const { nom, prenom, adresse, email, telephone } = req.body;
         const newClient = new Client({ nom, prenom, adresse, email, telephone });
         const client = await newClient.save();
-
+        //await sendClientMessage('creation', { id: client._id, nom, prenom, adresse, email, telephone });
         res.json(client);
     } catch (err) {
         res.status(500).send("Error while creating client: " + err.message);
@@ -87,7 +85,6 @@ app.post('/room', async (req, res) => {
         const { numero, type, status, prix, description } = req.body;
         const newRoom = new Room({ numero, type, status, prix, description });
         const room = await newRoom.save();
-        await produceMessage('test-topic', room);
         res.json(room);
     } catch (err) {
         res.status(500).send("Error while creating room: " + err.message);
@@ -169,26 +166,17 @@ app.post('/reservation', async (req, res) => {
         if (!clientExists) {
             return res.status(400).send("Client not found");
         }
-
-        // Vérifier si la chambre existe
         const roomData = await Room.findById(room);
         if (!roomData) {
             return res.status(400).send("Room not found");
         }
-
-        // Vérifier si la chambre est libre
         if (roomData.status !== 'libre') {
             return res.status(400).send("Room is not available");
         }
-
-        // Mettre à jour le statut de la chambre à "réservée"
         roomData.status = 'réservée';
         await roomData.save();
-
-        // Créer une nouvelle réservation
         const newReservation = new Reservation({ client, room, dateStart, dateEnd });
         const reservation = await newReservation.save();
-
         res.json(reservation);
     } catch (err) {
         res.status(500).send("Error while creating reservation: " + err.message);
