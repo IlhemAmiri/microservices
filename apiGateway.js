@@ -235,25 +235,36 @@ app.put('/grpc/client/:id', async (req, res) => {
   }
 });
   
-  app.get('/grpc/client', (req, res) => {
-    client.getAllClients({}, (err, response) => {
+app.get('/grpc/client', async (req, res) => {
+  try {
+    client.getAllClients({}, async (err, response) => {
       if (err) {
         res.status(500).send("Error while fetching all clients: " + err.message);
         return;
       }
+      await sendClientMessage('recuperation_tous', {});
       res.json(response.clients);
     });
-  });
-  
-  app.get('/grpc/client/:id', (req, res) => {
-    client.getClient({ client_id: req.params.id }, (err, response) => {
+  } catch (error) {
+    res.status(500).send("Error while fetching all clients: " + error.message);
+  }
+});
+
+app.get('/grpc/client/:id', async (req, res) => {
+  try {
+    client.getClient({ client_id: req.params.id }, async (err, response) => {
       if (err) {
         res.status(500).send("Error while fetching client: " + err.message);
         return;
       }
+      await sendClientMessage('recuperation', { clientId: req.params.id });
       res.json(response.client);
     });
-  });
+  } catch (error) {
+    res.status(500).send("Error while fetching client: " + error.message);
+  }
+});
+
   
 // Suppression d'un client avec suppression des réservations associées et mise à jour du statut des chambres
 app.delete('/grpc/client/:id', (req, res) => {
