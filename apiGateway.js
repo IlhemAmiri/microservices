@@ -7,7 +7,7 @@ const Room = require('./models/roomModel');
 const Reservation = require('./models/reservationModel');
 const protoLoader = require('@grpc/proto-loader');
 const grpc = require('@grpc/grpc-js');
-//const { sendClientMessage } = require('./kafka/clientProducer');
+const { sendClientMessage } = require('./kafka/clientProducer');
 const app = express();
 
 connectDB();
@@ -198,26 +198,42 @@ app.get('/grpc/reservation/:id', (req, res) => {
   });
 
 // Routes gRPC pour les clients
-app.post('/grpc/client', (req, res) => {
-    client.createClient(req.body, (err, response) => {
-      if (err) {
-        res.status(500).send("Error while creating client: " + err.message);
-        return;
-      }
-      res.json(response.client);
+app.post('/grpc/client', async (req, res) => {
+  try {
+    const response = await new Promise((resolve, reject) => {
+      client.createClient(req.body, (err, response) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(response);
+        }
+      });
     });
-  });
+    await sendClientMessage('creation', { id: response.client.id, ...req.body }); 
+    res.json(response.client);
+  } catch (error) {
+    res.status(500).send("Error while creating client: " + error.message);
+  }
+});
   
-  app.put('/grpc/client/:id', (req, res) => {
+app.put('/grpc/client/:id', async (req, res) => {
+  try {
     const requestData = Object.assign({}, req.body, { client_id: req.params.id });
-    client.updateClient(requestData, (err, response) => {
-      if (err) {
-        res.status(500).send("Error while updating client: " + err.message);
-        return;
-      }
-      res.json(response.client);
+    const response = await new Promise((resolve, reject) => {
+      client.updateClient(requestData, (err, response) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(response);
+        }
+      });
     });
-  });
+    await sendClientMessage('modification', { id: req.params.id, ...req.body }); // Envoyer un message Kafka lors de la modification d'un client
+    res.json(response.client);
+  } catch (error) {
+    res.status(500).send("Error while updating client: " + error.message);
+  }
+});
   
   app.get('/grpc/client', (req, res) => {
     client.getAllClients({}, (err, response) => {
@@ -259,6 +275,7 @@ app.delete('/grpc/client/:id', (req, res) => {
       }
 
       await Reservation.deleteMany({ client: client_id });
+      await sendClientMessage('suppression', { id: req.params.id });
 
       res.json({ message: "Client and associated reservations deleted successfully" });
     } catch (err) {
@@ -298,7 +315,7 @@ app.post('/client', async (req, res) => {
         const { nom, prenom, adresse, email, telephone } = req.body;
         const newClient = new Client({ nom, prenom, adresse, email, telephone });
         const client = await newClient.save();
-        //await sendClientMessage('creation', { id: client._id, nom, prenom, adresse, email, telephone });
+        await sendClientMessage('creation', { id: client._id, nom, prenom, adresse, email, telephone });
         res.json(client);
     } catch (err) {
         res.status(500).send("Error while creating client: " + err.message);
@@ -329,7 +346,7 @@ app.delete('/client/:id', async (req, res) => {
 
       // Supprimer le client lui-même
       await Client.findByIdAndDelete(req.params.id);
-
+      await sendClientMessage('suppression', { id: req.params.id });
       res.json({ message: "Client deleted successfully" });
   } catch (err) {
       res.status(500).send("Error while deleting client: " + err.message);
@@ -344,6 +361,7 @@ app.put('/client/:id', async (req, res) => {
         if (!updatedClient) {
             return res.status(404).send("Client not found");
         }
+        await sendClientMessage('modification', { id: updatedClient._id, nom, prenom, adresse, email, telephone }); 
         res.json(updatedClient);
     } catch (err) {
         res.status(500).send("Error while updating client: " + err.message);

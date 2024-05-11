@@ -3,6 +3,7 @@ const protoLoader = require('@grpc/proto-loader');
 const Client = require('./models/clientModel');
 const Room = require('./models/roomModel');
 const Reservation = require('./models/reservationModel');
+const { sendClientMessage } = require('./kafka/clientProducer');
 
 const clientProtoPath = './proto/client.proto';
 const roomProtoPath = './proto/room.proto';
@@ -114,6 +115,7 @@ const resolvers = {
             }
           });
         });
+        await sendClientMessage('creation', { id: client.id, nom, prenom, adresse, email, telephone });
         return client;
       } catch (error) {
         throw new Error("Failed to create client: " + error);
@@ -168,6 +170,7 @@ const resolvers = {
             if (!updatedClient) {
                 throw new Error("Client not found");
             }
+            await sendClientMessage('modification', { id: updatedClient.id, nom, prenom, adresse, email, telephone });
             return updatedClient;
         } catch (error) {
             throw new Error("Failed to update client: " + error.message);
@@ -216,7 +219,7 @@ const resolvers = {
     
         // Supprimer toutes les réservations associées à ce client
         await Reservation.deleteMany({ client: id });
-    
+        await sendClientMessage('suppression', { id });
         return deletedClient;
       } catch (error) {
         throw new Error("Failed to delete client: " + error.message);

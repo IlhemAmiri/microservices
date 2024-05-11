@@ -10,7 +10,7 @@ const consumer = kafka.consumer({ groupId: 'client-group' });
 const run = async () => {
   try {
     await consumer.connect();
-    await consumer.subscribe({ topic: 'client-events', fromBeginning: true });
+    await consumer.subscribe({ topic: 'client-test', fromBeginning: true });
     await consumer.run({
       eachMessage: async ({ topic, partition, message }) => {
         const event = JSON.parse(message.value.toString());

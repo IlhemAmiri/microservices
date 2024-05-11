@@ -14,7 +14,7 @@ const sendClientMessage = async (eventType, clientData) => {
   try {
     await producer.connect();
     await producer.send({
-      topic: 'client-events', 
+      topic: 'client-test', 
       messages: [
         { value: JSON.stringify({ eventType, clientData }) }
       ],
