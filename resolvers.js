@@ -51,6 +51,7 @@ const resolvers = {
             if (!client) {
               throw new Error("Client not found");
             }
+            await sendClientMessage('recuperation', { clientId: id });
             return client;
           } catch (error) {
             throw new Error("Error while fetching client: " + error.message);
@@ -59,6 +60,7 @@ const resolvers = {
         clients: async () => {
           try {
             const clients = await Client.find();
+            await sendClientMessage('recuperation_tous', {});
             return clients;
           } catch (error) {
             throw new Error("Error while fetching clients: " + error.message);
