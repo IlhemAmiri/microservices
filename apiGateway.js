@@ -293,6 +293,7 @@ app.get('/client', async (req, res) => {
     try {
         const clients = await Client.find();
         res.json(clients);
+        await sendClientMessage('recuperation_tous', {});
     } catch (err) {
         res.status(500).send("Error while fetching clients: " + err.message);
     }
@@ -305,6 +306,7 @@ app.get('/client/:id', async (req, res) => {
             return res.status(404).send("Client not found");
         }
         res.json(client);
+        await sendClientMessage('recuperation', { clientId: req.params.id });
     } catch (err) {
         res.status(500).send("Error while fetching client: " + err.message);
     }
