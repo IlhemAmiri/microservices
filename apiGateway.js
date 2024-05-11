@@ -89,16 +89,24 @@ app.post('/grpc/rooms', (req, res) => {
     });
   });
   
-  app.delete('/grpc/rooms/:id', (req, res) => {
-    const roomId = req.params.id;
-    RoomService.deleteRoom({ room_id: roomId }, (err, response) => {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ message: response.message });
-    });
+// Suppression d'une chambre avec suppression des réservations associées et mise à jour du statut des chambres
+app.delete('/grpc/rooms/:id', (req, res) => {
+  const roomId = req.params.id;
+  RoomService.deleteRoom({ room_id: roomId }, async (err, response) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    // Supprimer toutes les réservations associées à cette chambre
+    try {
+      await Reservation.deleteMany({ room: roomId });
+      res.json({ message: "Room and associated reservations deleted successfully" });
+    } catch (err) {
+      res.status(500).send("Error while deleting room and associated reservations: " + err.message);
+    }
   });
+});
+
 // Route pour récupérer une réservation
 app.get('/grpc/reservation/:id', (req, res) => {
     const reservationId = req.params.id;
@@ -143,7 +151,7 @@ app.get('/grpc/reservation/:id', (req, res) => {
   // Route pour mettre à jour une réservation
   app.put('/grpc/reservation/:id', (req, res) => {
     const reservationId = req.params.id;
-    const { client_id, room_id, dateStart, dateEnd } = req.body;
+    const { client, room, dateStart, dateEnd } = req.body;
     ReservationService.updateReservation({ reservation_id: reservationId, client, room, dateStart, dateEnd }, (err, response) => {
       if (err) {
         res.status(500).send("Error while updating reservation: " + err.message);
@@ -154,16 +162,29 @@ app.get('/grpc/reservation/:id', (req, res) => {
   });
   
   // Route pour supprimer une réservation
-  app.delete('/grpc/reservation/:id', (req, res) => {
+  app.delete('/grpc/reservation/:id', async (req, res) => {
     const reservationId = req.params.id;
-    ReservationService.deleteReservation({ reservation_id: reservationId }, (err, response) => {
-      if (err) {
-        res.status(500).send("Error while deleting reservation: " + err.message);
-        return;
+    try {
+      const reservation = await Reservation.findById(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: "Reservation not found" });
       }
+  
+      const room = await Room.findById(reservation.room);
+      if (!room) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+      room.status = 'libre'; 
+      await room.save();
+  
+      await Reservation.findByIdAndDelete(reservationId);
+  
       res.json({ message: "Reservation deleted successfully" });
-    });
+    } catch (err) {
+      res.status(500).send("Error while deleting reservation: " + err.message);
+    }
   });
+  
   
   // Route pour récupérer toutes les réservations
   app.get('/grpc/reservation', (req, res) => {
@@ -218,15 +239,34 @@ app.post('/grpc/client', (req, res) => {
     });
   });
   
-  app.delete('/grpc/client/:id', (req, res) => {
-    const client_id = req.params.id;
-    client.deleteClient({ client_id }, (err, response) => {
-      if (err) {
-        res.status(500).send("Error while deleting client: " + err.message);
-        return;
+// Suppression d'un client avec suppression des réservations associées et mise à jour du statut des chambres
+app.delete('/grpc/client/:id', (req, res) => {
+  const client_id = req.params.id;
+  client.deleteClient({ client_id }, async (err, response) => {
+    if (err) {
+      res.status(500).send("Error while deleting client: " + err.message);
+      return;
+    }
+    try {
+      const reservations = await Reservation.find({ client: client_id });
+
+      for (const reservation of reservations) {
+        const room = await Room.findById(reservation.room);
+        if (room) {
+          room.status = 'libre';
+          await room.save();
+        }
       }
-      res.json({ message: "client deleted successfully" });    });
+
+      await Reservation.deleteMany({ client: client_id });
+
+      res.json({ message: "Client and associated reservations deleted successfully" });
+    } catch (err) {
+      res.status(500).send("Error while deleting client and associated reservations: " + err.message);
+    }
   });
+});
+
 
 
 
@@ -266,16 +306,36 @@ app.post('/client', async (req, res) => {
 });
 
 app.delete('/client/:id', async (req, res) => {
-    try {
-        const client = await Client.findByIdAndDelete(req.params.id);
-        if (!client) {
-            return res.status(404).send("Client not found");
-        }
-        res.json({ message: "Client deleted successfully" });
-    } catch (err) {
-        res.status(500).send("Error while deleting client: " + err.message);
-    }
+  try {
+      const client = await Client.findById(req.params.id);
+      if (!client) {
+          return res.status(404).send("Client not found");
+      }
+
+      // Trouver toutes les réservations liées à ce client
+      const reservations = await Reservation.find({ client: req.params.id });
+
+      // Pour chaque réservation, mettre à jour le statut de la chambre à "libre"
+      for (const reservation of reservations) {
+          const room = await Room.findById(reservation.room);
+          if (room) {
+              room.status = 'libre';
+              await room.save();
+          }
+      }
+
+      // Supprimer toutes les réservations liées à ce client
+      await Reservation.deleteMany({ client: req.params.id });
+
+      // Supprimer le client lui-même
+      await Client.findByIdAndDelete(req.params.id);
+
+      res.json({ message: "Client deleted successfully" });
+  } catch (err) {
+      res.status(500).send("Error while deleting client: " + err.message);
+  }
 });
+
 
 app.put('/client/:id', async (req, res) => {
     try {
@@ -323,16 +383,24 @@ app.put('/room/:id', async (req, res) => {
 });
 
 app.delete('/room/:id', async (req, res) => {
-    try {
-        const room = await Room.findByIdAndDelete(req.params.id);
-        if (!room) {
-            return res.status(404).send("Room not found");
-        }
-        res.json({ message: "Room deleted successfully" });
-    } catch (err) {
-        res.status(500).send("Error while deleting room: " + err.message);
-    }
+  try {
+      const room = await Room.findById(req.params.id);
+      if (!room) {
+          return res.status(404).send("Room not found");
+      }
+
+      await Reservation.deleteMany({ room: req.params.id });
+
+      await Room.updateMany({ _id: { $ne: req.params.id } }, { $set: { status: 'libre' } });
+
+      await Room.findByIdAndDelete(req.params.id);
+
+      res.json({ message: "Room deleted successfully" });
+  } catch (err) {
+      res.status(500).send("Error while deleting room: " + err.message);
+  }
 });
+
 app.get('/room/:id', async (req, res) => {
     try {
         const room = await Room.findById(req.params.id);
@@ -357,6 +425,7 @@ app.put('/room/:id', async (req, res) => {
         res.status(500).send("Error while updating room: " + err.message);
     }
 });
+
 app.get('/reservation', async (req, res) => {
     try {
         const reservations = await Reservation.find();
@@ -365,17 +434,29 @@ app.get('/reservation', async (req, res) => {
         res.status(500).send("Error while fetching reservations: " + err.message);
     }
 });
+
 app.delete('/reservation/:id', async (req, res) => {
-    try {
-        const reservation = await Reservation.findByIdAndDelete(req.params.id);
-        if (!reservation) {
-            return res.status(404).send("Reservation not found");
-        }
-        res.json({ message: "Reservation deleted successfully" });
-    } catch (err) {
-        res.status(500).send("Error while deleting reservation: " + err.message);
+  try {
+    const reservation = await Reservation.findByIdAndDelete(req.params.id);
+    if (!reservation) {
+      return res.status(404).send("Reservation not found");
     }
+
+    const room = await Room.findById(reservation.room);
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    room.status = 'libre';
+    await room.save();
+
+    res.json({ message: "Reservation deleted successfully" });
+  } catch (err) {
+    res.status(500).send("Error while deleting reservation: " + err.message);
+  }
 });
+
+
 
 app.post('/reservation', async (req, res) => {
     try {

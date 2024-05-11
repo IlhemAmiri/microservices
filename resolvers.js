@@ -196,38 +196,67 @@ const resolvers = {
         }
     },
     deleteClient: async (_, { id }) => {
-        try {
-          const deletedClient = await Client.findByIdAndDelete(id);
-          if (!deletedClient) {
-            throw new Error("Client not found");
-          }
-          return deletedClient;
-        } catch (error) {
-          throw new Error("Failed to delete client: " + error.message);
+      try {
+        const deletedClient = await Client.findByIdAndDelete(id);
+        if (!deletedClient) {
+          throw new Error("Client not found");
         }
-      },
-      deleteRoom: async (_, { id }) => {
-        try {
-          const deletedRoom = await Room.findByIdAndDelete(id);
-          if (!deletedRoom) {
-            throw new Error("Room not found");
+    
+        // Récupérer toutes les réservations associées à ce client
+        const reservations = await Reservation.find({ client: id });
+    
+        // Mettre à jour le statut de chaque chambre associée à ces réservations à "libre"
+        for (const reservation of reservations) {
+          const room = await Room.findById(reservation.room);
+          if (room) {
+            room.status = 'libre';
+            await room.save();
           }
-          return deletedRoom;
-        } catch (error) {
-          throw new Error("Failed to delete room: " + error.message);
         }
-      },
+    
+        // Supprimer toutes les réservations associées à ce client
+        await Reservation.deleteMany({ client: id });
+    
+        return deletedClient;
+      } catch (error) {
+        throw new Error("Failed to delete client: " + error.message);
+      }
+    },
+    
+    
+    deleteRoom: async (_, { id }) => {
+      try {
+        const deletedRoom = await Room.findByIdAndDelete(id);
+        if (!deletedRoom) {
+          throw new Error("Room not found");
+        }
+    
+        // Supprimer toutes les réservations associées à cette chambre
+        await Reservation.deleteMany({ room: id });
+    
+        return deletedRoom;
+      } catch (error) {
+        throw new Error("Failed to delete room: " + error.message);
+      }
+    },
+    
       deleteReservation: async (_, { id }) => {
         try {
           const deletedReservation = await Reservation.findByIdAndDelete(id);
           if (!deletedReservation) {
             throw new Error("Reservation not found");
           }
+          const room = await Room.findById(deletedReservation.room);
+          if (!room) {
+            throw new Error("Room not found");
+          }
+          room.status = 'libre';
+          await room.save();      
           return deletedReservation;
         } catch (error) {
           throw new Error("Failed to delete reservation: " + error.message);
         }
-      },
+      },  
   },
 };
 
