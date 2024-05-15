@@ -1,4 +1,6 @@
 const { Kafka } = require('kafkajs');
+const Client = require('../models/clientModel'); 
+
 
 const kafka = new Kafka({
   clientId: 'client-consumer',
