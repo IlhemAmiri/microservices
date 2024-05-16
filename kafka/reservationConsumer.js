@@ -1,5 +1,12 @@
 const { Kafka } = require('kafkajs');
 const Reservation = require('../models/reservationModel'); 
+const mongoose = require('mongoose');
+mongoose.connect('mongodb://127.0.0.1:27017/mon_projet', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 const kafka = new Kafka({
   clientId: 'reservation-consumer',
